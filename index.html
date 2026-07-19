@@ -1,141 +1,219 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>WySub - Fast AI Subtitles</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#000000">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial; background: #0a0a0a; color: #fff; padding-bottom: 40px; }
-    header { position: sticky; top: 0; background: #000; padding: 15px; text-align: center; }
-    .container { padding: 20px; text-align: center; }
-    h1 { font-size: 26px; margin-bottom: 5px; }
-    
-    /* FIXED BUTTON */
-    .plus-label { 
-      background: #fff; color: #000; width: 80px; height: 80px; 
-      border-radius: 50%; font-size: 40px; margin: 20px auto; 
-      display: flex; align-items: center; justify-content: center; 
-      cursor: pointer; 
-    }
-    #videoInput { display: none; } /* Hidden but label triggers it */
-    
-    .process-btn { background: #0f0; color: #000; padding: 16px 40px; border-radius: 50px; font-size: 18px; font-weight: bold; border: none; margin: 10px 0; width: 90%; display: none; }
-    .file-name { color: #0f0; font-size: 14px; margin: 10px; word-break: break-all; }
-    .loader { border: 4px solid #333; border-top: 4px solid #0f0; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
-    .lang { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; padding: 15px; background: #1a1a1a; border-radius: 12px; }
-    .download-btn { background: #fff; color: #000; padding: 8px 16px; border-radius: 8px; border: none; }
-    .affiliate { background: #FF0000; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 20px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WySub</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #333;
+            padding: 1em;
+            text-align: center;
+        }
+
+        main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2em;
+        }
+
+        .upload-button {
+            background-color: #fff;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 2em;
+            padding: 1em;
+            width: 4em;
+        }
+
+        #filename {
+            margin-top: 1em;
+        }
+
+        #process-button {
+            background-color: #0f0;
+            border: none;
+            border-radius: 0.5em;
+            cursor: pointer;
+            font-size: 1em;
+            padding: 0.5em 1em;
+            margin-top: 1em;
+        }
+
+        #loading-spinner {
+            border: 8px solid rgba(0, 0, 0, 0.1);
+            border-top: 8px solid #fff;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        #cards-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .card {
+            background-color: #333;
+            border: 1px solid #444;
+            border-radius: 0.5em;
+            margin: 1em;
+            padding: 1em;
+            width: 45%;
+        }
+
+        .card span {
+            font-size: 1.5em;
+        }
+
+        footer {
+            background-color: #333;
+            padding: 1em;
+            text-align: center;
+        }
+
+        #watch-here-button {
+            background-color: #0f0;
+            border: none;
+            border-radius: 0.5em;
+            cursor: pointer;
+            font-size: 1em;
+            padding: 0.5em 1em;
+        }
+    </style>
 </head>
 <body>
+    <header>
+        <h1>WySub</h1>
+    </header>
+    <main>
+        <label for="file" class="upload-button">
+            <span>📹</span>
+        </label>
+        <input type="file" id="file" accept="video/*">
+        <p id="filename"></p>
+        <button id="process-button" disabled>PROCESS VIDEO</button>
+        <div id="loading-spinner" style="display: none;"></div>
+        <div id="cards-container" style="display: none;"></div>
+        <p id="free-requests-left"></p>
+    </main>
+    <footer>
+        <button id="watch-here-button">WATCH HERE</button>
+    </footer>
+    <script>
+        let fileInput = document.getElementById('file');
+        let filenameElement = document.getElementById('filename');
+        let processButton = document.getElementById('process-button');
+        let loadingSpinner = document.getElementById('loading-spinner');
+        let cardsContainer = document.getElementById('cards-container');
+        let freeRequestsLeftElement = document.getElementById('free-requests-left');
+        let watchHereButton = document.getElementById('watch-here-button');
 
-<header><h2>WySub</h2></header>
+        let freeRequestsLeft = localStorage.getItem('freeRequestsLeft');
+        if (freeRequestsLeft === null) {
+            freeRequestsLeft = 3;
+        } else {
+            freeRequestsLeft = parseInt(freeRequestsLeft);
+        }
 
-<div class="container">
-  <h1>WySub 😎</h1>
-  <p style="color:#888; font-size:14px">AI Subtitles in 5 Languages. 5MB Data Only.</p>
+        freeRequestsLeftElement.textContent = `Free requests left: ${freeRequestsLeft}`;
 
-  <!-- FIX: LABEL TRIGGERS INPUT -->
-  <input type="file" id="videoInput" accept="video/*">
-  <label for="videoInput" class="plus-label">+</label>
-  <p class="file-name" id="fileName">Tap + to select video</p>
-  
-  <button class="process-btn" id="processBtn">PROCESS VIDEO</button>
-  <p style="font-size:11px; color:#666">POWERED BY GEMINI</p>
-  <p style="color:#0f0" id="requests">Free requests left: 3</p>
-  
-  <div class="loader" id="loader"></div>
-  <div id="downloads"></div>
+        fileInput.addEventListener('change', (e) => {
+            let file = fileInput.files[0];
+            filenameElement.textContent = `📹 ${file.name}`;
+            processButton.disabled = false;
+        });
 
-  <a href="#" onclick="alert('Coming Soon')" class="affiliate">WATCH HERE</a>
-</div>
+        processButton.addEventListener('click', (e) => {
+            if (freeRequestsLeft > 0) {
+                freeRequestsLeft--;
+                localStorage.setItem('freeRequestsLeft', freeRequestsLeft.toString());
+                freeRequestsLeftElement.textContent = `Free requests left: ${freeRequestsLeft}`;
+                processButton.disabled = true;
+                loadingSpinner.style.display = 'block';
 
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
-<script>
-const API_URL = 'https://wy-sub.vercel.app/api/subtitle';
-const SMARTLINK = 'https://potterynaggingformerly.com/zc8d0546ft?key=082d573b4743dc2b0111e797b8b2e4c0';
+                const videoFile = fileInput.files[0];
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const videoData = e.target.result;
+                    const formData = new FormData();
+                    formData.append('file', videoFile);
 
-const LANGUAGES = [
-  {code:'en', name:'English', flag:'🇺🇸'},
-  {code:'fr', name:'French', flag:'🇫🇷'},
-  {code:'zh', name:'Chinese', flag:'🇨🇳'},
-  {code:'yo', name:'Yoruba', flag:'🇳🇬'},
-  {code:'es', name:'Spanish', flag:'🇪🇸'}
-];
+                    fetch('https://api.wysub.com/api/subtitle', {
+                        method: 'POST',
+                        body: formData,
+                    })
+                        .then((response) => response.json())
+                        .then((data) => {
+                            loadingSpinner.style.display = 'none';
+                            cardsContainer.style.display = 'block';
+                            cardsContainer.innerHTML = '';
+                            data.files.forEach((file) => {
+                                let card = document.createElement('div');
+                                card.classList.add('card');
+                                card.innerHTML = `
+                                    <span>${file.flag}</span>
+                                    <span>${file.name}</span>
+                                    <button class="download-button">Download</button>
+                                `;
+                                cardsContainer.appendChild(card);
+                                let downloadButton = card.querySelector('.download-button');
+                                downloadButton.addEventListener('click', (e) => {
+                                    window.open('https://potterynaggingformerly.com/zc8d0546ft?key=082d573b4743dc2b0111e797b8b2e4c0', '_blank');
+                                    let blob = new Blob([file.srt], { type: 'text/plain' });
+                                    let url = URL.createObjectURL(blob);
+                                    let a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `${file.lang}.srt`;
+                                    a.click();
+                                });
+                            });
+                        })
+                        .catch((error) => {
+                            console.error(error);
+                        });
+                };
+                reader.readAsBinaryString(videoFile);
+            } else {
+                alert('You have reached the daily limit of free requests.');
+            }
+        });
 
-let requests = localStorage.getItem('wysub_requests') || 3;
-document.getElementById('requests').innerText = `Free requests left: ${requests}`;
-if(requests <= 0) document.getElementById('processBtn').disabled = true;
+        watchHereButton.addEventListener('click', (e) => {
+            alert('Coming Soon');
+        });
 
-const { createFFmpeg, fetchFile } = FFmpeg;
-const ffmpeg = createFFmpeg({ log: false });
-let selectedFile = null;
-
-// FIX 1: PROPER FILE PICKER
-document.getElementById('videoInput').addEventListener('change', function(e) {
-  selectedFile = e.target.files[0];
-  if(!selectedFile) return alert("No file selected");
-  
-  document.getElementById('fileName').innerText = `📹 ${selectedFile.name} - ${(selectedFile.size/1024/1024).toFixed(2)}MB`;
-  document.getElementById('processBtn').style.display = 'block';
-  document.getElementById('downloads').innerHTML = '';
-  
-  console.log("File added:", selectedFile.name); // For debugging
-})
-
-// PROCESS
-document.getElementById('processBtn').onclick = async () => {
-  if(!selectedFile) return alert("Select video first");
-  if(requests <= 0) return alert("No free requests left");
-  
-  document.getElementById('processBtn').disabled = true;
-  document.getElementById('processBtn').innerText = "Processing...";
-  document.getElementById('loader').style.display = 'block';
-  
-  try {
-    alert("Step 1: Loading FFmpeg..."); // Debug
-    if(!ffmpeg.isLoaded()) await ffmpeg.load();
-    
-    alert("Step 2: Extracting audio..."); // Debug
-    ffmpeg.FS('writeFile', 'video.mp4', await fetchFile(selectedFile));
-    await ffmpeg.run('-i', 'video.mp4', '-vn', '-acodec', 'libmp3lame', '-b:a', '64k', 'audio.mp3');
-    const audioData = ffmpeg.FS('readFile', 'audio.mp3');
-    const audioBase64 = btoa(String.fromCharCode(...audioData));
-    
-    let html = '';
-    for(let lang of LANGUAGES){
-      alert("Step 3: Sending to Gemini - " + lang.name); // Debug
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({audioBase64, language: lang.name})
-      });
-      const data = await res.json();
-      if(data.error) throw new Error(data.error);
-      const url = URL.createObjectURL(new Blob([data.srt], {type: 'text/srt'}));
-      html += `<div class="lang"><div>${lang.flag} ${lang.name}</div><button class="download-btn" onclick="downloadWithAd('${url}', 'WySub_${lang.code}.srt')">Download</button></div>`;
-    }
-    document.getElementById('downloads').innerHTML = html;
-    requests--; localStorage.setItem('wysub_requests', requests);
-    document.getElementById('requests').innerText = `Free requests left: ${requests}`;
-    
-  } catch(err) {
-    alert("ERROR: " + err.message);
-    console.error(err);
-  }
-  
-  document.getElementById('loader').style.display = 'none';
-  document.getElementById('processBtn').innerText = "PROCESS VIDEO";
-  document.getElementById('processBtn').disabled = false;
-}
-
-function downloadWithAd(url, filename){
-  window.open(SMARTLINK, '_blank');
-  const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
-}
-</script>
-
+        // Pull to refresh
+        document.addEventListener('DOMContentLoaded', function () {
+            let refreshing = false;
+            window.addEventListener('scroll', function () {
+                if (window.scrollY === 0 && !refreshing) {
+                    refreshing = true;
+                    window.location.reload();
+                }
+            });
+        });
+    </script>
 </body>
 </html>
