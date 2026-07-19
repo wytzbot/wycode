@@ -8,47 +8,36 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial; background: #0a0a0a; color: #fff; }
     
-    /* PULL TO REFRESH */
     #pull { height: 60px; text-align: center; line-height: 60px; color: #888; display: none; }
     
-    /* HEADER + MENU */
     header { position: sticky; top: 0; background: #000; padding: 15px; display: flex; justify-content: space-between; z-index: 100; }
     .menu { position: fixed; top: 60px; left: -250px; width: 250px; height: 100%; background: #111; transition: 0.3s; padding: 20px; z-index: 99; }
     .menu.active { left: 0; }
     .menu a { display: block; color: #fff; padding: 15px 0; text-decoration: none; border-bottom: 1px solid #222; }
     
-    /* MAIN */
-    .container { padding: 20px; text-align: center; min-height: 70vh; }
+    .container { padding: 20px; text-align: center; min-height: 80vh; }
     h1 { font-size: 28px; margin-bottom: 10px; }
     
-    /* BUTTONS */
-    .plus-btn { background: #fff; color: #000; width: 80px; height: 80px; border-radius: 50%; font-size: 40px; border: none; margin: 20px auto; display: flex; align-items: center; justify-content: center; }
-    .process-btn { background: #0f0; color: #000; padding: 16px 40px; border-radius: 50px; font-size: 18px; font-weight: bold; border: none; margin: 10px 0; width: 90%; max-width: 300px; display: none; }
+    .plus-btn { background: #fff; color: #000; width: 80px; height: 80px; border-radius: 50%; font-size: 40px; border: none; margin: 20px auto; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .process-btn { background: #0f0; color: #000; padding: 16px 40px; border-radius: 50px; font-size: 18px; font-weight: bold; border: none; margin: 10px 0; width: 90%; max-width: 300px; display: none; cursor: pointer; }
     .process-btn:disabled { background: #333; color: #666; }
     
     .trust { font-size: 11px; color: #666; }
     .req { font-size: 14px; color: #0f0; margin: 10px; }
     .file-name { color: #0f0; font-size: 14px; margin-top: -10px; word-break: break-all; padding: 0 10px; }
     
-    /* LOADER */
     .loader { border: 4px solid #333; border-top: 4px solid #0f0; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     
-    /* LANGUAGE CARDS */
     .lang { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; padding: 15px; background: #1a1a1a; border-radius: 12px; }
     .lang-info { display: flex; align-items: center; gap: 10px; font-size: 16px; }
     .download-btn { background: #fff; color: #000; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: bold; border: none; cursor: pointer; }
     
-    /* FOOTER */
     footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
     .affiliate { background: #FF0000; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; display: inline-block; margin: 10px; }
   </style>
 </head>
 <body>
-
-<!-- TOP AD BANNER -->
-<script async="async" data-cfasync="false" src="https://potterynaggingformerly.com/7984a298ab57ecc7fdc0acd7fb29b964/invoke.js"></script>
-<div id="container-7984a298ab57ecc7fdc0acd7fb29b964"></div>
 
 <header>
   <button onclick="toggleMenu()" style="background:none; border:none; color:#fff; font-size:24px">☰</button>
@@ -70,7 +59,7 @@
 
   <input type="file" id="videoInput" accept="video/*" style="display:none">
   <button class="plus-btn" onclick="document.getElementById('videoInput').click()">+</button>
-  <p class="file-name" id="fileName"></p>
+  <p class="file-name" id="fileName">No video selected</p>
   
   <button class="process-btn" id="processBtn">PROCESS VIDEO</button>
   <p class="trust">THIS PROCESSED BY GEMINI</p>
@@ -83,15 +72,12 @@
     <p>Fast. Private. No Video Upload.</p>
     <a href="#" onclick="alert('Coming Soon')" class="affiliate">WATCH HERE</a>
   </footer>
-
-  <!-- BOTTOM AD -->
-  <script src="https://potterynaggingformerly.com/4c/e3/be/4ce3beb716c312a093c145adf4d5c5e5.js"></script>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
 <script>
 const API_URL = 'https://wy-sub.vercel.app/api/subtitle';
-const SMARTLINK = 'https://potterynaggingformerly.com/zc8d0546ft?key=082d573b4743dc2b0111e797b8b2e4c0'; // ✅ YOUR SMARTLINK
+const SMARTLINK = 'https://potterynaggingformerly.com/zc8d0546ft?key=082d573b4743dc2b0111e797b8b2e4c0';
 
 const LANGUAGES = [
   {code:'en', name:'English', flag:'🇺🇸'},
@@ -115,6 +101,7 @@ function updateRequests(){
   document.getElementById('requests').innerText = `Free requests left: ${requests}`;
   localStorage.setItem('wysub_requests', requests);
   document.getElementById('processBtn').disabled = requests <= 0;
+  if(requests <= 0) document.getElementById('processBtn').innerText = "NO FREE REQUESTS";
 }
 
 function toggleMenu(){ document.getElementById('menu').classList.toggle('active'); }
@@ -130,60 +117,67 @@ document.addEventListener('touchend', e => {
   document.getElementById('pull').style.display = 'none';
 });
 
-// STEP 1: ADD VIDEO
+// FIX 1: VIDEO ADDING NOW
 document.getElementById('videoInput').onchange = (e) => {
   selectedFile = e.target.files[0];
+  if(!selectedFile) return;
+  
   document.getElementById('fileName').innerText = `📹 ${selectedFile.name}`;
   document.getElementById('processBtn').style.display = 'block'; // Show process button
   document.getElementById('downloads').innerHTML = ''; // Clear old results
+  
+  // FIX: Reset input so you can select same file again
+  e.target.value = '';
 }
 
-// STEP 2: PROCESS VIDEO
+// PROCESS VIDEO
 document.getElementById('processBtn').onclick = async () => {
   if(requests <= 0) return alert("Daily limit reached. Come back tomorrow");
-  if(!selectedFile) return;
+  if(!selectedFile) return alert("Please select a video first");
   
   document.getElementById('processBtn').innerText = "Processing...";
   document.getElementById('processBtn').disabled = true;
-  document.getElementById('loader').style.display = 'block'; // Show spinner
+  document.getElementById('loader').style.display = 'block';
   
-  if(!ffmpeg.isLoaded()) await ffmpeg.load();
-  ffmpeg.FS('writeFile', 'video.mp4', await fetchFile(selectedFile));
-  await ffmpeg.run('-i', 'video.mp4', '-vn', '-acodec', 'libmp3lame', '-q:a', '9', 'audio.mp3');
-  const audioData = ffmpeg.FS('readFile', 'audio.mp3');
-  const audioBase64 = btoa(String.fromCharCode(...audioData));
-  
-  let html = '';
-  for(let lang of LANGUAGES){
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({audioBase64, language: lang.name})
-    });
-    const data = await res.json();
-    const blob = new Blob([data.srt], {type: 'text/srt'});
-    const url = URL.createObjectURL(blob);
-    html += `
-      <div class="lang">
-        <div class="lang-info">${lang.flag} ${lang.name}</div>
-        <button class="download-btn" onclick="downloadWithAd('${url}', 'WySub_${lang.code}.srt')">Download</button>
-      </div>`;
+  try {
+    if(!ffmpeg.isLoaded()) await ffmpeg.load();
+    ffmpeg.FS('writeFile', 'video.mp4', await fetchFile(selectedFile));
+    await ffmpeg.run('-i', 'video.mp4', '-vn', '-acodec', 'libmp3lame', '-q:a', '9', 'audio.mp3');
+    const audioData = ffmpeg.FS('readFile', 'audio.mp3');
+    const audioBase64 = btoa(String.fromCharCode(...audioData));
+    
+    let html = '';
+    for(let lang of LANGUAGES){
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({audioBase64, language: lang.name})
+      });
+      const data = await res.json();
+      if(data.error) throw new Error(data.error);
+      const blob = new Blob([data.srt], {type: 'text/srt'});
+      const url = URL.createObjectURL(blob);
+      html += `
+        <div class="lang">
+          <div class="lang-info">${lang.flag} ${lang.name}</div>
+          <button class="download-btn" onclick="downloadWithAd('${url}', 'WySub_${lang.code}.srt')">Download</button>
+        </div>`;
+    }
+    document.getElementById('downloads').innerHTML = html;
+    
+    requests--; updateRequests();
+  } catch(err) {
+    alert("Error: " + err.message);
   }
-  document.getElementById('downloads').innerHTML = html;
   
-  document.getElementById('loader').style.display = 'none'; // Hide spinner
+  document.getElementById('loader').style.display = 'none';
   document.getElementById('processBtn').innerText = "PROCESS VIDEO";
   document.getElementById('processBtn').disabled = false;
-  
-  requests--; updateRequests();
 }
 
-// STEP 3: DOWNLOAD + TRIGGER SMARTLINK AD
+// DOWNLOAD + SMARTLINK ONLY
 function downloadWithAd(url, filename){
-  // 1. Trigger smartlink ad in new tab
-  window.open(SMARTLINK, '_blank');
-  
-  // 2. Download the file
+  window.open(SMARTLINK, '_blank'); // Only ad now
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
