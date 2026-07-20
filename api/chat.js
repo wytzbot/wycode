@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // Always return valid JSON headers
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -22,13 +21,12 @@ export default async function handler(req, res) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY environment variable is not set in Vercel settings.' });
+      return res.status(500).json({ error: 'GEMINI_API_KEY is missing in Vercel Environment Variables.' });
     }
 
-    // Prepare contents payload for Gemini API
     const parts = [];
 
-    // Add image if attached
+    // Image payload
     if (image && image.data && image.mimeType) {
       parts.push({
         inline_data: {
@@ -38,45 +36,54 @@ export default async function handler(req, res) {
       });
     }
 
-    // Add prompt text
+    // Text payload
     if (prompt) {
       parts.push({ text: prompt });
     }
 
     const systemInstruction = "You are WyCode AI, a professional coding assistant. Sound human, friendly, use simple English. Be concise. Always wrap all code in markdown code blocks with the correct language. After code, add 1 sentence explanation. If debugging, explain error simply then give fix. Tech stack: React, Tailwind, Firebase, Vercel.";
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    // Primary model target
+    const targetModel = "gemini-2.5-flash";
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const requestPayload = {
+      system_instruction: {
+        parts: [{ text: systemInstruction }]
       },
-      body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: systemInstruction }]
-        },
-        contents: [
-          {
-            parts: parts
-          }
-        ]
-      })
+      contents: [{ parts: parts }]
+    };
+
+    // Helper for fetch with 1-step retry backoff on 429 Rate Limits
+    let response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestPayload)
     });
+
+    // If rate limited (429), wait 2.5s and retry once automatically
+    if (response.status === 429) {
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestPayload)
+      });
+    }
 
     const data = await response.json();
 
     if (!response.ok) {
-      const errorMessage = data?.error?.message || `Gemini API returned status ${response.status}`;
-      return res.status(response.status).json({ error: errorMessage });
+      const errMsg = data?.error?.message || `API error (${response.status})`;
+      return res.status(response.status).json({ error: errMsg });
     }
 
-    const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No response text generated.";
+    const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
 
     return res.status(200).json({ reply: replyText });
 
   } catch (error) {
     console.error("Vercel Function Error:", error);
-    return res.status(500).json({ error: error.message || 'An internal server error occurred' });
+    return res.status(500).json({ error: error.message || 'Server processing error' });
   }
-           }
+        }
