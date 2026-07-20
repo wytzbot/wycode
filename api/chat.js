@@ -1,3 +1,7 @@
+// Simple in-memory cache map (persists across warm serverless executions)
+const responseCache = new Map();
+const MAX_CACHE_SIZE = 100; // Keep memory footprint small
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,6 +21,18 @@ export default async function handler(req, res) {
 
     if (!prompt && !image) {
       return res.status(400).json({ error: 'Prompt or image attachment is required' });
+    }
+
+    // Generate a unique cache key based on prompt and/or image data
+    const cacheKey = JSON.stringify({ prompt: prompt?.trim().toLowerCase(), hasImage: !!image });
+
+    // 1. Check Cache Hit
+    if (responseCache.has(cacheKey)) {
+      console.log("Serving response from server cache...");
+      return res.status(200).json({ 
+        reply: responseCache.get(cacheKey),
+        cached: true 
+      });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -50,8 +66,8 @@ export default async function handler(req, res) {
       contents: [{ parts: parts }]
     });
 
-    // Model fallback chain: tries current active production models in sequence
-    const modelCandidates = ["gemini-2.5-flash", "gemini-3.5-flash", "gemini-2.5-flash-lite"];
+    // Model fallback chain
+    const modelCandidates = ["gemini-3.5-flash", "gemini-2.5-flash-lite"];
     let lastError = "";
 
     for (const model of modelCandidates) {
@@ -77,7 +93,16 @@ export default async function handler(req, res) {
         const data = await response.json();
 
         if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-          return res.status(200).json({ reply: data.candidates[0].content.parts[0].text });
+          const replyText = data.candidates[0].content.parts[0].text;
+
+          // 2. Save result to cache (if cache is full, delete oldest item)
+          if (responseCache.size >= MAX_CACHE_SIZE) {
+            const oldestKey = responseCache.keys().next().value;
+            responseCache.delete(oldestKey);
+          }
+          responseCache.set(cacheKey, replyText);
+
+          return res.status(200).json({ reply: replyText, cached: false });
         }
 
         lastError = data?.error?.message || `Model ${model} returned error status ${response.status}`;
@@ -92,4 +117,4 @@ export default async function handler(req, res) {
     console.error("Vercel Function Error:", error);
     return res.status(500).json({ error: error.message || 'Internal server error' });
   }
-                                   }
+        }
